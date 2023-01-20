@@ -1,0 +1,27 @@
+PROJET_ASPIRATEUR_INTELLIGENT_V0: 
+.Fonctionnalités présentes
+-> Création d'un Environnement 1D & 2D:
+    * Environnement 1D
+        - Indication de la présence de l'Agent par le caractère dans une salle de l'Environnement'*'
+        - Indication saleté d'une Classe par une lettre(ou chaine de caractère) de couleur Rouge
+        - Indication propreté d'une Classe par une lettre(ou chaine de caractère) de couleur Blanche
+        - Possibiliter de configurer la taille de l'Environnement
+
+    * Environnement 2D
+        - Indication de la présence de l'Agent par le caractère dans une salle de l'Environnement'*'
+        - Indication saleté d'une Classe par une lettre(ou chaine de caractère) de couleur Rouge
+        - Indication propreté d'une Classe par une lettre(ou chaine de caractère) de couleur Blanche
+        - Possibilité de configurer la largeur de l'Environnement, donc également la Forme de l'Environnement
+-> Création d'un Agent interagissant avec l'Environnement:
+    * Implémentation d'une Méthode de prise d'actions aléatoire par l'Agent
+    * Implémentation d'une Méthode de prise d'actions par l'Agent en fonction d'une Mémoire de l'Environnement via Etat Interne (Table de Transition)
+    * Détection des bord de l'Environnement
+
+.Fonctionnalités à Développer
+-> Définir une Méthode d'évaluation de l'Agent pertinente
+-> Approfondir la Méthode Etat Interne (arrêter de choisir une action aléatoire si plusieurs actions sont possibles)
+-> Fixer les problèmes de Reset de l'Environnement & Agent quand on veut commencer l'epoch suivant
+-> Implémenter la Pénalisation de l'Agent
+
+
+-----------------------------------------------------------------------------------
