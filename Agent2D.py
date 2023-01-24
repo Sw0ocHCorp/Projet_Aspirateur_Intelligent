@@ -8,7 +8,9 @@ HAUT= 2
 BAS= 3
 ASPIRATION= 4
 
+# --> Classe modélisant l'agent évoluant dans l'environnement (Environnement 2D)
 class Agent2D:
+    # --* Constructeur
     def __init__(self, y_position, x_position, width_env, max_room):
         self.action= None
         self.x_position= x_position
@@ -22,9 +24,34 @@ class Agent2D:
         self.height_env= ceil(max_room/width_env)
         self.haveCleaned= False
         self.selected_action= ""
-        self.twUnbound= False
         self.table_interne= dict()
+        self.isInverted= False
+        self.prev_action= ""
+        self.wall_detection= np.array([False, False, False, False])
+
+        if (((self.height_env-1) - self.init_y_position)  % 2) == 0:
+            self.isAller= False
+        else:
+            self.isAller= True
+
+        if (self.height_env % 2) == 0:
+            if self.x_position == (self.width_env-1) & self.y_position == self.height_env-1:
+                self.isLast= True
+            else:
+                self.isLast= False
+        else:
+            if self.x_position == 0 & self.y_position == self.height_env-1:
+                self.isLast= True
+            else:
+                self.isLast= False
     
+    def get_futures_location(self):
+        return np.array([(self.y_position, self.x_position-1), (self.y_position, self.x_position+1), (self.y_position -1, self.x_position), (self.y_position +1, self.x_position)]) #Futures positions possibles | 0: Gauche | 1: Droite | 2: Haut | 3: Bas
+
+    def set_walls_around(self, walls):
+        self.wall_detection= walls
+
+    # --* Méthode permettant de sélectionner le système de prise de décision / action
     def select_action(self, room, mode= 'r'):
         self.isCleaning= False
         if room is not None:
@@ -37,10 +64,13 @@ class Agent2D:
                             self.take_random_movement()
                         elif mode == 'e':
                             self.take_optimal_movement(room)
+                        elif mode == 's':
+                            self.take_simple_movement()
                     else:
                         self.action= ASPIRATION
                         self.isCleaning= True
-                        self.haveCleaned= True
+                        if mode != 's':
+                            self.haveCleaned= True
                         self.selected_action= "|.^|"
                 else:
                     print("L'aspirateur ne peut pas nettoyer la salle n'est pas présent dedans")
@@ -49,52 +79,44 @@ class Agent2D:
                     self.take_random_movement()
                 elif mode == 'e':
                     self.take_optimal_movement(room)
+                elif mode == 's':
+                    self.take_simple_movement()
         return self.selected_action
 
+    # --* Méthode modélisant le système prise de décision / action aléatoire
     def take_random_movement(self):
-        self.twUnbound= False
         self.action= random.randint(0, 3)
+        while self.wall_detection[self.action]:
+            self.action= random.randint(0, 3)
         self.selected_action= ""
         if self.action == GAUCHE:
             self.selected_action= "<-"
-            if self.x_position != 0:
-                self.x_position-= 1
-                self.visited_rooms+= 1
-                if self.haveCleaned:
-                    self.haveCleaned= False
-            else:
-                self.twUnbound= True
+            self.x_position-= 1
+            self.visited_rooms+= 1
+            if self.haveCleaned:
+                self.haveCleaned= False
         elif self.action == DROITE:
             self.selected_action= "->"
-            if self.x_position != self.width_env-1:
-                self.x_position+= 1
-                self.visited_rooms+= 1
-                if self.haveCleaned:
-                    self.haveCleaned= False
-            else:
-                self.twUnbound= True
+            self.x_position+= 1
+            self.visited_rooms+= 1
+            if self.haveCleaned:
+                self.haveCleaned= False
         elif self.action == HAUT:
             self.selected_action= "^"
-            if self.y_position != 0:
-                self.y_position-= 1
-                self.visited_rooms+= 1
-                if self.haveCleaned:
-                    self.haveCleaned= False
-            else:
-                self.twUnbound= True
+            self.y_position-= 1
+            self.visited_rooms+= 1
+            if self.haveCleaned:
+                self.haveCleaned= False
         elif self.action == BAS:
             self.selected_action= "v"
-            if self.y_position != self.height_env:
-                if (self.y_position + 1) * self.width_env + self.x_position < self.max_room:
-                    self.y_position+= 1
-                    self.visited_rooms+= 1
-                    if self.haveCleaned:
-                        self.haveCleaned= False
-            else: 
-                self.twUnbound= True
+            self.y_position+= 1
+            self.visited_rooms+= 1
+            if self.haveCleaned:
+                self.haveCleaned= False
+            
     
+    # --* Méthode modélisant le système de prise de décision / action selon la table de transition(etat interne)
     def take_optimal_movement(self, room):
-        self.twUnbound= False
         self.selected_action= ""
         room_name= room.get_name()
         if room_name not in self.table_interne:
@@ -122,119 +144,76 @@ class Agent2D:
             if self.haveCleaned:
                 self.haveCleaned= False
         self.visited_rooms+= 1
-
+    
+    # --* Méthode permettant de mémoriser les possibilités d'action pour chaque salle (dans la table de transition)
     def memorize_room_possibility(self, room):
         room_name= room.get_name()
         actions_possibles= np.array([])
-        #Test de déplacement vers la Droite | Permet de détecter les bords de l'environnement
-        test= (self.y_position ) * self.width_env + self.x_position + 1 
-        #Test de déplacement vers le Bas | Permet de détecter les bords de l'environnement
-        main_test= (self.y_position + 1) * self.width_env + self.x_position 
-        #SI ON A DES BORD EN BAS ET EN HAUT
-        if (main_test > self.max_room -1) & (self.y_position == 0):
-            #SI ON A UN BORD A DROITE || Bord si Dernière Salle
-            if test >= self.max_room -1:
-                #SI ON A UN BORD A GAUCHE
-                if self.x_position == 0:
-                    actions_possibles= np.append(actions_possibles, HAUT)
-                #RESTE -> SI ON A RIEN A GAUCHE
-                else:
-                    actions_possibles= np.append(actions_possibles, GAUCHE)
-            #SI ON A UN BORD A DROITE || Bord si Dernière Salle
-            elif self.x_position == self.width_env-1:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-            #SINON SI ON A UN BORD A GAUCHE
-            elif self.x_position == 0:
-                actions_possibles= np.append(actions_possibles, DROITE)
-            #RESTE -> SI ON A RIEN A DROITE ET A GAUCHE
-            else:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-                actions_possibles= np.append(actions_possibles, DROITE)
-        #SINON SI ON A UN BORD EN BAS
-        elif main_test > self.max_room-1:
-            actions_possibles= np.append(actions_possibles, HAUT)
-            #SI ON A UN BORD A DROITE || Bord si ligne non complète
-            if test > self.max_room-1:
-                #SI ON A UN BORD A GAUCHE
-                if self.x_position == 0:
-                    pass                #Pas d'actions supplémentaires possibles
-                #RESTE -> SI ON A RIEN A GAUCHE
-                else:
-                    actions_possibles= np.append(actions_possibles, GAUCHE)
-            #SI ON A UN BORD A DROITE || Bord si Dernière Salle
-            elif self.x_position == self.width_env-1:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-            #SINON SI ON A UN BORD A GAUCHE
-            elif self.x_position == 0:
-                actions_possibles= np.append(actions_possibles, DROITE)
-            #RESTE -> SI ON A RIEN A DROITE ET A GAUCHE
-            else:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-                actions_possibles= np.append(actions_possibles, DROITE)
-        #SINON SI ON A UN BORD EN HAUT
-        elif self.y_position == 0:
-            actions_possibles= np.append(actions_possibles, BAS)
-            #SI ON A UN BORD A DROITE || Bord si ligne non complète
-            if test >= self.max_room-1:
-                #SI ON A UN BORD A GAUCHE
-                if self.x_position == 0:
-                    pass                #Pas d'actions supplémentaires possibles
-                #RESTE -> SI ON A RIEN A GAUCHE
-                else:
-                    actions_possibles= np.append(actions_possibles, GAUCHE)
-            #SI ON A UN BORD A DROITE || Bord si Dernière Salle
-            elif self.x_position == self.width_env-1:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-            #SINON SI ON A UN BORD A GAUCHE
-            elif self.x_position == 0:
-                actions_possibles= np.append(actions_possibles, DROITE)
-            #RESTE -> SI ON A RIEN A DROITE ET A GAUCHE
-            else:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-                actions_possibles= np.append(actions_possibles, DROITE)
-        #RESTE -> SI ON A AUCUNS BORDS EN BAS ET EN HAUT
-        else:
-            #SI ON A UN BORD A GAUCHE
-            if self.x_position == 0:
-                actions_possibles= np.append(actions_possibles, DROITE)
-                #SI SI ON A UN BORD EN BAS
-                if main_test > self.max_room-1:
-                    actions_possibles= np.append(actions_possibles, HAUT)
-                #SINON SI ON A UN BORD EN HAUT
-                elif self.y_position == 0:
-                    actions_possibles= np.append(actions_possibles, BAS)
-                #RESTE -> SI ON A RIEN EN BAS ET EN HAUT
-                else: 
-                    actions_possibles= np.append(actions_possibles, HAUT)
-                    actions_possibles= np.append(actions_possibles, BAS)
-            #SINON SI ON A UN BORD A DROITE
-            elif self.x_position == self.width_env-1:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-                #SI SI ON A UN BORD EN BAS
-                if main_test > self.max_room-1:
-                    actions_possibles= np.append(actions_possibles, HAUT)
-                #SINON SI ON A UN BORD EN HAUT
-                elif self.y_position == 0:
-                    actions_possibles= np.append(actions_possibles, BAS)
-                #RESTE -> SI ON A RIEN EN BAS ET EN HAUT
-                else: 
-                    actions_possibles= np.append(actions_possibles, HAUT)
-                    actions_possibles= np.append(actions_possibles, BAS)
-            #RESTE -> SI ON A RIEN A GAUCHE ET A DROITE | Plus globalement, si on a AUCUNS BORDS    
-            else:
-                actions_possibles= np.append(actions_possibles, GAUCHE)
-                actions_possibles= np.append(actions_possibles, DROITE)
-                actions_possibles= np.append(actions_possibles, HAUT)
-                actions_possibles= np.append(actions_possibles, BAS)
+        for i in range(len(self.wall_detection)):
+            if self.wall_detection[i] == False:
+                actions_possibles= np.append(actions_possibles, i)
         self.table_interne.update({room_name: actions_possibles})
 
+    def take_simple_movement(self):
+        if self.y_position >= 0 & self.y_position <= self.height_env-1:
+            if (self.height_env % 2) == 0:          # SI LIGNES ENVIRONNEMENT PAIRE
+                if (self.y_position % 2) == 0:
+                    self.isAller= False
+                else:
+                    self.isAller= True
+                if self.x_position == (self.width_env-1) and self.y_position == self.height_env-1:    # Dernière salle= BAS DROITE
+                    self.isLast= True
+                elif self.x_position == (self.width_env-1) and self.y_position == 0:                  # Première salle= HAUT DROITE
+                    self.isLast= False        
+            else:                                   # SI LIGNES ENVIRONNEMENT IMPAIRE
+                if self.isInverted:     #TRAJET REST APRÈS ETRE PASSE PAR LA DERNIERE SALLE
+                    if self.x_position == 0 and self.y_position == 0:                         # Reset
+                        self.isLast= False
+                    if self.x_position == (self.width_env-1) and self.y_position == self.height_env-1:    # Dernière salle= BAS DROITE
+                        self.isLast= True
+                        self.isInverted= False
+                    elif self.x_position == (self.width_env-1) and self.y_position == 0:                  # Première salle= HAUT DROITE
+                        self.isLast= False     
+                    elif (self.y_position % 2) == 0:
+                        self.isAller= True
+                    else:
+                        self.isAller= False
+                else:                   #1er TRAJET JUSQU'A LA DERNIERE SALLE
+                    if self.x_position == 0 and self.y_position == self.height_env-1:         # Dernière salle= BAS GAUCHE
+                        self.isLast= True
+                        self.isInverted= True
+                    if self.x_position == 0 and self.y_position == 0:                         # Première salle= HAUT GAUCHE
+                        self.isLast= False
+                    elif (self.y_position % 2) == 0:
+                        self.isAller= False
+                    else:
+                        self.isAller= True
+            if self.isLast:
+                self.selected_action= "^"
+                self.y_position-= 1
+            elif ((self.x_position == 0 and not self.prev_action == "v") and self.y_position != self.height_env-1) and not (self.x_position == 0 and self.y_position == 0 and self.isInverted):
+                self.selected_action= "v"
+                self.y_position+= 1
+                self.visited_rooms+= 1
+            elif ((self.x_position == self.width_env-1 and not self.prev_action == "v") and self.y_position != self.height_env-1) and not(self.x_position == self.width_env-1 and self.y_position == 0 and not self.isInverted):
+                self.selected_action= "v"
+                self.y_position+= 1
+                self.visited_rooms+= 1
+            elif self.isAller:
+                self.selected_action= ">"
+                self.x_position+= 1
+                self.visited_rooms+= 1
+            else:
+                self.selected_action= "<"
+                self.x_position-= 1
+                self.visited_rooms+= 1
+            self.prev_action= self.selected_action
 
+    # --* Méthode GETTER du nombre de salle visitées
     def get_visited_rooms(self):
         return self.visited_rooms
     
-    def get_twUnbound(self):
-        return self.twUnbound
-    
+    # --* Méthode permettant de réinitialiser l'agent
     def reset(self):
         self.x_position= self.init_x_position
         self.y_position= self.init_y_position
@@ -243,7 +222,30 @@ class Agent2D:
         self.visited_rooms= 1
         self.haveCleaned= False
         self.selected_action= ""
-        self.twUnbound= False
+        self.isInverted= not self.isInverted
+        if self.isInverted:
+            if (self.height_env % 2) != 0:
+                if self.x_position == (self.width_env-1) & self.y_position == self.height_env:
+                    self.isLast= True
+                if self.x_position == 0 & self.y_position == 0:
+                    self.isLast= False
+            else:
+                if self.x_position == 0 & self.y_position == self.height_env:
+                    self.isLast= True
+                if self.x_position == 0 & self.y_position == 0:
+                    self.isLast= False
+        else:
+            if (self.height_env % 2) == 0:
+                if self.x_position == (self.width_env-1) & self.y_position == self.height_env:
+                    self.isLast= True
+                if self.x_position == 0 & self.y_position == 0:
+                    self.isLast= False
+            else:
+                if self.x_position == 0 & self.y_position == self.height_env:
+                    self.isLast= True
+                if self.x_position == 0 & self.y_position == 0:
+                    self.isLast= False
 
+    # --* Méthode GETTER de la position de l'agent
     def get_room_position(self):
         return self.y_position, self.x_position

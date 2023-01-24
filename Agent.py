@@ -4,7 +4,9 @@ GAUCHE= 0
 DROITE= 1
 ASPIRATION= 2
 
+# --> Classe modélisant l'agent évoluant dans l'environnement (Environnement 1D)
 class Agent:
+    # --* Constructeur
     def __init__(self, room_position, max_room):
         self.room_position= room_position
         self.max_room= max_room
@@ -17,6 +19,7 @@ class Agent:
         self.table_interne= dict()
         self.init_position= room_position
     
+    # --* Méthode permettant de sélectionner le système de prise de décision / action
     def select_action(self, room, mode= 'r'):
         self.isCleaning= False
         if not room.isClean:
@@ -41,6 +44,7 @@ class Agent:
                 self.take_optimal_movement(room)
         return self.selected_action
 
+    # --* Méthode modélisant le système prise de décision / action aléatoire
     def take_random_movement(self):
         self.twUnbound= False
         self.action= random.randint(0, 1)
@@ -66,7 +70,8 @@ class Agent:
                 self.twUnbound= True
         else:
             print("L'aspirateur ne peut pas nettoyer la salle n'est pas présent dedans")
-            
+
+    # --* Méthode modélisant le système de prise de décision / action selon la table de transition(etat interne)    
     def take_optimal_movement(self, room):
         etat_possible= np.array([])
         self.twUnbound= False
@@ -88,6 +93,7 @@ class Agent:
                 self.haveCleaned= False
         self.visited_rooms+= 1
     
+    # --* Méthode permettant de mémoriser les possibilités d'action pour chaque salle (dans la table de transition)
     def memorize_room_possibility(self, room):
         room_name= room.get_name()
         actions_possibles= np.array([])
@@ -100,14 +106,15 @@ class Agent:
             actions_possibles= np.append(actions_possibles, DROITE)
         self.table_interne.update({room_name: actions_possibles})
         
-
-
+    # --* Méthode GETTER du nombre de salle visitées
     def get_visited_rooms(self):
         return self.visited_rooms
 
+    # --* Méthode GETTER du Trigger Warning de sortie de l'environnement
     def get_twUnbound(self):
         return self.twUnbound
 
+    # --* Méthode permettant de réinitialiser l'agent
     def reset(self):
         self.room_position= self.init_position
         self.action= None
@@ -117,5 +124,6 @@ class Agent:
         self.selected_action= ""
         self.twUnbound= False
 
+    # --* Méthode GETTER de la position de l'agent
     def get_room_position(self):
         return self.room_position
