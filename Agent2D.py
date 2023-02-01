@@ -25,7 +25,7 @@ class Agent2D:
         self.haveCleaned= False
         self.selected_action= ""
         self.table_interne= dict()
-        self.isInverted= False
+        self.isInverted= True
         self.prev_action= ""
         self.wall_detection= np.array([False, False, False, False])
 
@@ -121,8 +121,15 @@ class Agent2D:
         room_name= room.get_name()
         if room_name not in self.table_interne:
             self.memorize_room_possibility(room)
-        etat_possible= np.array(self.table_interne.get(room_name))
-        self.action= random.choice(etat_possible)
+        actions_possibles= self.table_interne[room_name][0]
+        prev_action= self.table_interne[room_name][1]
+        self.action= random.choice(actions_possibles)
+        if prev_action != -1:
+            actions_possibles= np.append(actions_possibles, prev_action)
+        prev_action= self.action
+        if len(actions_possibles) > 1:
+            actions_possibles= np.delete(actions_possibles, np.where(actions_possibles == self.action))
+            self.table_interne.update({room_name: (actions_possibles, prev_action)})
         if self.action == GAUCHE:
             self.selected_action= "<-"
             self.x_position-= 1
@@ -152,9 +159,11 @@ class Agent2D:
         for i in range(len(self.wall_detection)):
             if self.wall_detection[i] == False:
                 actions_possibles= np.append(actions_possibles, i)
-        self.table_interne.update({room_name: actions_possibles})
+        self.table_interne.update({room_name: (actions_possibles, -1)})
 
     def take_simple_movement(self):
+        if self.haveCleaned:
+                self.haveCleaned= False
         if self.y_position >= 0 & self.y_position <= self.height_env-1:
             if (self.height_env % 2) == 0:          # SI LIGNES ENVIRONNEMENT PAIRE
                 if (self.y_position % 2) == 0:

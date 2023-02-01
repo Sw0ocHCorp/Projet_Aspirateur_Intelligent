@@ -3,11 +3,22 @@ from colorama import Fore
 # --> Classe modélisant une salle de l'Environnement (1D ou 2D)
 class Classe:
     # --* Constructeur
-    def __init__(self, name, isClean= True):
+    def __init__(self, name, position, isClean= True):
         self.name= name
         self.isClean= isClean
         self.isPresent= False
         self.init_clean= isClean
+        self.position= position
+        self.g= 1000
+        self.h= 0
+        self.f= self.g + self.h
+        self.previous= None
+        self.isInit= False
+
+    def set_init_room(self, isInit):
+        self.isInit= isInit
+    
+    
 
     # --* Méthode permettant d'indiquer la présence de l'aspirateur
     def set_aspi_present(self, isPresent):
@@ -34,9 +45,10 @@ class Classe:
         return self.name
     
     # --* Méthode permettant de réinitialiser la salle
-    def reset_state(self):
+    def reset_state(self, full= True):
         self.isClean= self.init_clean
-        self.isPresent= False
+        if full:
+            self.isPresent= False
 
     # --* Méthode permettant d'afficher la salle dans la console (avec la commande print(str(room)))
     def __str__(self) -> str:
@@ -50,3 +62,17 @@ class Classe:
                 return " " + Fore.RED + self.name + Fore.RESET + "* "
             else:
                 return " " + Fore.RED + self.name + Fore.RESET + " "
+    
+    def set_Astar_caracteristics(self, g, h, previous):
+        self.g= g
+        self.h= h
+        self.f= g+h
+        self.previous= previous
+    def reset_Astar_caracteristics(self):
+        if self.isInit:
+            self.g= 0
+        else:
+            self.g= 1000
+        self.h= 0
+        self.f= 1000
+        self.previous= None
