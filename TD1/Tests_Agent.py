@@ -46,6 +46,7 @@ def test_1(agent_position, room_number, width_env, messies_rooms):
     env.calculate_opti_cpt(is2D= True)
     env.agent_interactions(epochs= 1, dimension= 2, mode= 's')
 
+
 def test_2(agent_position, room_number, width_env, messies_rooms, number_obstacles, agent_mode):
     rooms_names= np.array([], dtype= str)
     n_row = ceil(room_number/width_env)
@@ -110,7 +111,7 @@ def test_2(agent_position, room_number, width_env, messies_rooms, number_obstacl
 # et remplacer la ligne 76 du fichier Agent2D.py par : if random.random() <= 1:
 
 # --> Test 1.1= Environnement 2D, Stratégie Simple , 9 pièces dont 3 par lignes, Agent2D en (0,0), 3 pièces sales (0,1), (2,0), (2,2)
-#test_1((0,0), 9, 3, [(0,1), (2,0), (2,2)])
+test_1((0,0), 9, 3, [(0,1), (2,0), (2,2)])
 # --> Test 1.2= Environnement 2D, Stratégie Simple , 9 pièces dont 3 par lignes, Agent2D en (0,2), 3 pièces sales (0,1), (2,0), (2,2)
 test_1((0,2), 9, 3, [(0,1), (2,0), (2,2)])
 # --> Test 1.3= Environnement 2D, Stratégie Simple , 9 pièces dont 3 par lignes, Agent2D en (1,1), 3 pièces sales (0,1), (0,2), (2,1), (2,2)
@@ -126,6 +127,10 @@ print("---------------------------------------------")
 print("---------------------------------------------")
 #--> Test 2
 test_2(agent_position= (1,1), room_number= 9, width_env= 3, messies_rooms= [(0,1), (0,2), (2,1), (2,2)], number_obstacles= 0, agent_mode= "RANDOM")
+print("---------------------------------------------")
+"""
+"""
+#Q4
 test_2(agent_position= (1,1), room_number= 9, width_env= 3, messies_rooms= [(0,1), (0,2), (2,1), (2,2)], number_obstacles= 0, agent_mode= "MEMORISATION")
 """
 """
@@ -137,13 +142,15 @@ test_2(agent_position= (0,2), room_number= 9, width_env= 3, messies_rooms= [(1,2
 """
 """
 #Q8
-test_1((0,2), 9, 3, [(1,0)])
+test_1((0,2), 9, 3, [(1,0)])                            #Agent Réflexes Simples
 print("---------------------------------------------")
 print("---------------------------------------------")
 test_2(agent_position= (0,2), room_number= 9, width_env= 3, messies_rooms= [(1,0)], number_obstacles= 0, agent_mode= "RANDOM")
 """
+"""
 #Q9
-test_1((0,2), 9, 3, [(1,2)])
+#test_1((0,2), 9, 3, [(1,2)])                            #Agent Réflexes Simples
 print("---------------------------------------------")
 print("---------------------------------------------")
-test_2(agent_position= (0,2), room_number= 9, width_env= 3, messies_rooms= [(1,2)], number_obstacles= 1, agent_mode= "MEMORISATION")
+test_2(agent_position= (0,2), room_number= 9, width_env= 3, messies_rooms= [(1,2)], number_obstacles= 2, agent_mode= "MEMORISATION")
+"""

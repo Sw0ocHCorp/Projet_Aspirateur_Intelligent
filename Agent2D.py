@@ -247,7 +247,6 @@ class Agent2D:
     #Création du Modèle Interne de l'Agent / Table de Transition de l'ensenble des états de l'environnement | Connaissance innée de l'Environnement
     def build_model(self):
         env= self.get_env()
-        self.set_env(None)  
         for i in range(self.height_env):
             for j in range(self.width_env):
                 actual_position= (i, j)
@@ -411,6 +410,7 @@ class Agent2D:
     def reset(self):
         self.x_position= self.init_x_position
         self.y_position= self.init_y_position
+        self.isModelInit= False
         self.isCleaning= False
         self.visited_rooms= 1
         self.haveCleaned= False

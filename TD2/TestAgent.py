@@ -47,15 +47,16 @@ def test_1(agent_position, room_number, width_env, messies_rooms, obstacles, mod
     env.calculate_opti_cpt(is2D= True)
     env.wall_detection()
     env.agent_interactions(epochs= 2, dimension= 2, mode= mode)
-"""
+
+
 #Q1-a/b
 test_1((0,2), 9, 3, [(2,2)], [(1,0)], mode="m")
-"""
+
 """
 #Q1-c/d
 test_1((0,0), 9, 3, [(1,1)], [], mode="t")
 """
 """
-#Q4 --> Faire Modif pour Supprimer Connaissance Innée de l'Environnement avant de lancer le Test(Voir P... rapport PDF)
+#Q4 --> Faire Modif pour Supprimer Connaissance Innée de l'Environnement avant de lancer le Test(Voir P18 - 21 rapport PDF)
 test_1((0,0), 9, 3, [(2,2)], [(1,1)], mode="m")
 """
