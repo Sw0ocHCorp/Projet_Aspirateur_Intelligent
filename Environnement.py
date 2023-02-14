@@ -11,11 +11,12 @@ from AlgorithmeAStar import AlgorithmeAStar
 # --> Classe modélisant l'environnement
 class  Environnement():
     # --* Constructeur
-    def __init__(self, rooms, dimension= 1, width= 0, height= 0):
+    def __init__(self, rooms, dimension= 1, width= 0, height= 0,):
         self.rooms= rooms
         self.width= width
         self.height= height
         self.messy_rooms= 0
+        self.opti_cpt= 0
         if dimension == 1:
             for room in self.rooms:
                 if not room.isClean:
@@ -114,9 +115,12 @@ class  Environnement():
                 adjacent_rooms= np.append(adjacent_rooms, self.rooms[location[0], location[1]])
         return adjacent_rooms
     
-    def calculate_max_perf(self, is2D= True):
+    def calculate_opti_cpt(self, is2D= True):
         self.astar_algo= AlgorithmeAStar(self, self.agent, is2D= is2D)
-        self.max_perf_actions= self.astar_algo.get_opti_actions()
+        self.opti_cpt= self.astar_algo.init_opti_cpt()
+        if self.opti_cpt == -1:
+            print("Erreur dans le calcul de la performance optimale")
+            self.opti_cpt= 0
 
     # --* Méthode de modélisation des interactions entre l'agent et l'environnement (Pour une disposition 1D)
     def interaction_1D(self, epochs= 10, mode= 'r'):
@@ -131,7 +135,7 @@ class  Environnement():
             print("Etat Initial de l'environnement", end= "")
             self.print_1D_env(rooms)
             print(messy_rooms, " Salles à nettoyer", end= "\n")
-            print("Nombre d'actions Minimum= ", self.max_perf_actions, end= "\n")
+            print("Nombre d'actions Minimum= ", self.opti_cpt, end= "\n")
             while messy_rooms > 0:
                 self.wall_detection(is2D= False)
                 agent_position= self.agent.get_room_position()
@@ -147,7 +151,7 @@ class  Environnement():
                 self.print_1D_env(rooms)
                 if self.agent.get_twUnbound == True:
                     print("L'agent à été stoppé car il voulait rentrer dans un mur", end="\n")
-            perf_mark= round(((nb_actions) / self.max_perf_actions) * 10)
+            perf_mark= round(((nb_actions) / self.opti_cpt) * 10)
             print("Note de Performance= ", perf_mark, " / 10")
             perf_array= np.append(perf_array, nb_actions)
             mark_array= np.append(mark_array, perf_mark)
@@ -161,15 +165,16 @@ class  Environnement():
         rooms= self.rooms
         visited_rooms= 0
         nb_actions= 0
-        messy_rooms= self.messy_rooms
         step= 0
         for e in range(epochs):
+            modified_env= False
             print(" --> EPOCH#", e, end="\n")
             self.reset_2D_env()
+            messy_rooms= self.messy_rooms
             print("Etat Initial de l'environnement", end= "")
             self.print_2D_env(rooms)
             print(messy_rooms, " Salles à nettoyer", end= "\n")
-            print("Nombre d'actions Minimum= ", self.max_perf_actions, end= "\n")
+            print("Nombre d'actions Minimum pour tout Nettoyer= ", self.opti_cpt, end= "\n")
             if mode == 's':    
                 selected_action= ""
                 while messy_rooms > 0:
@@ -189,33 +194,31 @@ class  Environnement():
                     print("     > Action n°", nb_actions, "= ", selected_action, end="")
                     self.print_2D_env(rooms)
             else:
-                    rooms= self.rooms
-                    visited_rooms= 0
-                    nb_actions= 0
-                    messy_rooms= self.messy_rooms
-                    print("Etat Initial de l'environnement", end= "")
-                    self.print_2D_env(rooms)
-                    print(messy_rooms, " Salles à nettoyer", end= "\n")
                     while messy_rooms > 0:
                         self.wall_detection(is2D= True)
                         agent_y_pos, agent_x_pos= self.agent.get_room_position()
                         isClean= rooms[agent_y_pos, agent_x_pos].isClean
                         selected_action= self.agent.select_action(rooms[agent_y_pos, agent_x_pos],mode = mode)
                         agent_y_pos, agent_x_pos= self.agent.get_room_position()
-                        self.env_2D_reaction(agent_y_pos, agent_x_pos, rooms)
+                        modified_env, added_messy_rooms= self.env_2D_reaction(agent_y_pos, agent_x_pos, rooms)
+                        messy_rooms+= added_messy_rooms
                         n_isClean= rooms[agent_y_pos, agent_x_pos].isClean
                         if isClean == False and n_isClean == True:
                             messy_rooms-= 1
                         nb_actions+= 1
                         print("     > Action n°", nb_actions, "= ", selected_action, end="")
                         self.print_2D_env(rooms)
+                        if modified_env:
+                            self.opti_cpt= self.astar_algo.update_opti_cpt(rooms= rooms, opti_cpt= self.opti_cpt)
+                            print("L'environnement à été modifié", end="\n")
+                            print("Nombre Total d'actions Minimum= ", self.opti_cpt)
             perf_mark= 0
-            if nb_actions > self.max_perf_actions:
-                perf_mark= 10 - (nb_actions - self.max_perf_actions) * 0.5
+            if nb_actions > self.opti_cpt:
+                perf_mark= 10 - (nb_actions - self.opti_cpt) * 0.5
                 if perf_mark < 0:
                     perf_mark= 0
             else:
-                perf_mark= round(((visited_rooms + self.messy_rooms) / self.max_perf_actions) * 10)
+                perf_mark= round((nb_actions / self.opti_cpt) * 10)
                 if perf_mark > 10:
                     perf_mark= 10
             print("Note de Performance= ", perf_mark, " / 10")
@@ -226,14 +229,28 @@ class  Environnement():
     
     # --* Méthode de MAJ de l'Environnement en Fonction de l'action de l'agent (Pour une disposition 2D)
     def env_2D_reaction(self, agent_y_pos, agent_x_pos, rooms):
+        nrow=0
+        ncol= 0
+        messy_rooms= 0
+        modified_env= False
         for row in rooms:
             for room in row:
                 if room is not None:
                     room.set_aspi_present(False)
+                    if (nrow != agent_y_pos) & (ncol != agent_x_pos):
+                        """if random.random() < 0.05:
+                            modified_env= True
+                            room.mess_room()
+                            messy_rooms+= 1
+                        """
                 if rooms[agent_y_pos, agent_x_pos] is not None:
                     rooms[agent_y_pos, agent_x_pos].set_aspi_present(True)
+            ncol += 1
+            nrow += 1
         if self.agent.isCleaning:
             rooms[agent_y_pos, agent_x_pos].clean_room()
+        return modified_env, messy_rooms
+
     # --* Méthode de MAJ de l'Environnement en Fonction de l'action de l'agent (Pour une disposition 1D)
     def env_reaction(self, agent_position, rooms):
         for room in rooms:
@@ -257,7 +274,7 @@ class  Environnement():
                 else:
                     print(str(room), end="")
         print()
-
+"""
 # --* TEST DE L'ENVIRONNEMENT   | FONCTION MAIN |
 if __name__ == "__main__":
     rooms_names= np.array([], dtype= str)
@@ -282,7 +299,7 @@ if __name__ == "__main__":
             random_agent_seed=  rand_clean= random.randint(0, len(rooms)-1)
             env.attach_agent(Agent(len(rooms)-1, len(rooms)))
             # ---> ALGORITHME D'EVOLUTION DE L'AGENT DANS L'ENVIRONNEMENT <--- #
-            env.calculate_max_perf(is2D= False)
+            env.calculate_opti_cpt(is2D= False)
             if agent_mode.upper() == "RANDOM":
                 env.agent_interactions(epochs= 2, dimension= 1, mode= 'r')
             elif agent_mode.upper() == "MEMORISATION":
@@ -346,7 +363,7 @@ if __name__ == "__main__":
                 env.attach_2D_agent(Agent2D(y_position= y_position, x_position= x_position,
                                                 width_env=width_env, max_room=room_number))
                 # ---> ALGORITHME D'EVOLUTION DE L'AGENT DANS L'ENVIRONNEMENT <--- #
-                env.calculate_max_perf(is2D= True)
+                env.calculate_opti_cpt(is2D= True)
                 if agent_mode.upper() == "RANDOM":
                     env.agent_interactions(epochs= 2, dimension= 2, mode= 'r')
                 elif agent_mode.upper() == "MEMORISATION":
@@ -355,3 +372,4 @@ if __name__ == "__main__":
                     env.agent_interactions(epochs= 2, dimension= 2, mode= 's')
     else:
         print("Dimension non valide")
+"""

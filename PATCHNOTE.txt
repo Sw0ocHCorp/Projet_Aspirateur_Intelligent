@@ -41,3 +41,23 @@ PROJET_ASPIRATEUR_INTELLIGENT_V1:
 -> Approfondir la Méthode Etat Interne (arrêter de choisir une action aléatoire si plusieurs actions sont possibles)
 -> Fixer les problèmes de Reset de l'Environnement & Agent quand on veut commencer l'epoch suivant
 -> Implémenter la Pénalisation de l'Agent
+
+-----------------------------------------------------------------------------------
+PROJET_ASPIRATEUR_INTELLIGENT_V2: 
+.Fonctionnalités ajoutées
+-> Création des Méthodes d'évaluation de l'Agent
+    * Environnement 2D
+        - Algorithme A* -> Méthode d'évaluation retenue
+-> Fix ordre index des positions des Classes dans l'Environnement
+-> Réorganisation de l'arborescence du projet
+-> Récupération de la dernière action prise pour optimiser l'Etat Interne de l'Agent
+-> Fix problème de Reset de l'Environnement & Agent quand on veut commencer l'epoch suivant ==> Possibilité de run plusieurs epochs
+--> Penalisation de l'Agent pour chaque action prise incluse dans la mesure de Performance(-0.5 / action "en trop")
+-> TD1 terminé
+-> Implémentation du Modèle de l'Agent(Mapping de tous les états de l'environnement en début d'epochs)
+-> Implémentation de l'arbre de décision de l'Agent(Condtion-Action)
+-> implementation de la variante probabiliste de l'Environment
+-> TD2 terminé
+
+.Fonctionnalités à Développer
+-> Régler les problèmes d'update du compteur d'actions optimales de l'Agent quand des pièces se salissent(Méthode non stable pour l'instant)
